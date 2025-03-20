@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Transcription</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+    <h1>Real-time Speech to Text</h1>
+    <button onclick="startListening()">Start</button>
+    <button onclick="stopListening()">Stop</button>
+    <div id="transcription"></div>
+
+    <script>
+        const socket = io.connect("http://localhost:5000");
+
+        function startListening() {
+            socket.emit("start_listening");
+        }
+
+        function stopListening() {
+            socket.emit("stop_listening");
+        }
+
+        socket.on("transcription", function (data) {
+            document.getElementById("transcription").innerText += data.text + " ";
+        });
+    </script>
+</body>
+</html>
