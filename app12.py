@@ -18,8 +18,8 @@ chunk_length = 1  # in seconds
 
 # Initialize Whisper Model
 model_size = "medium.en"
-# model = WhisperModel(model_size, device="cpu", compute_type="float32")
-model = WhisperModel(model_size, device="cuda", compute_type="float32")
+model = WhisperModel(model_size, device="cpu", compute_type="float32")
+# model = WhisperModel(model_size, device="cuda", compute_type="float32")
 
 is_recording = False
 p = pyaudio.PyAudio()
