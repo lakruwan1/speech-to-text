@@ -22,7 +22,8 @@ CHUNK_DURATION_MS = 1000  # How often to transcribe (in ms)
 # Buffer to store audio data
 audio_buffer = b''
 
-async def handle_client(websocket, path):
+# async def handle_client(websocket, path):
+async def handle_client(websocket):
     print(f"Client connected: {websocket.remote_address}")
 
     global audio_buffer
