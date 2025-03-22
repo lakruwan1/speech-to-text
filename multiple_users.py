@@ -6,7 +6,7 @@ import io
 from faster_whisper import WhisperModel
 
 HOST = '0.0.0.0'
-PORT = 10221
+PORT = 8765
 
 model_size = "medium.en"
 model = WhisperModel(model_size, device="cuda", compute_type="float16")
