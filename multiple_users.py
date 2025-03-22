@@ -14,7 +14,7 @@ model = WhisperModel(model_size, device="cuda", compute_type="float16")
 SAMPLE_RATE = 16000
 SAMPLE_WIDTH = 2
 CHANNELS = 1
-CHUNK_DURATION_MS = 500  # Reduced to 500ms for faster feedback
+CHUNK_DURATION_MS = 1000
 
 async def handle_client(websocket):
     print(f"Client connected: {websocket.remote_address}")
@@ -23,38 +23,24 @@ async def handle_client(websocket):
 
     try:
         async for message in websocket:
-            print(f"Received {len(message)} bytes from {websocket.remote_address}")
-
             audio_buffer += message
 
-            min_buffer_size = int(SAMPLE_RATE * SAMPLE_WIDTH * CHUNK_DURATION_MS / 1000)
-
-            if len(audio_buffer) >= min_buffer_size:
+            if len(audio_buffer) >= SAMPLE_RATE * SAMPLE_WIDTH * CHUNK_DURATION_MS / 1000:
                 audio_np = np.frombuffer(audio_buffer, dtype=np.int16)
 
                 with io.BytesIO() as wav_io:
                     sf.write(wav_io, audio_np, SAMPLE_RATE, format='WAV')
                     wav_io.seek(0)
 
-                    # Transcribe asynchronously
-                    segments, _ = await asyncio.to_thread(
-                        model.transcribe,
-                        wav_io,
-                        vad_filter=True  # optional, improves real-time results
-                    )
-
+                    segments, _ = await asyncio.to_thread(model.transcribe, wav_io)
                     transcription = " ".join([segment.text for segment in segments])
 
                     print(f"[{websocket.remote_address}] {transcription}")
 
-                    # Send transcription to client
-                    try:
-                        await websocket.send(transcription)
-                    except websockets.exceptions.ConnectionClosedError as e:
-                        print(f"Error sending transcription: {e}")
-                        break  # Exit the loop on connection error
+                    # Send back to client
+                    await websocket.send(transcription)
 
-                audio_buffer = b''  # Clear after processing
+                audio_buffer = b''
 
     except websockets.exceptions.ConnectionClosed as e:
         print(f"Client disconnected: {e}")
