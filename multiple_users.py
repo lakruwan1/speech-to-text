@@ -1,5 +1,4 @@
 import asyncio
-import ssl
 import websockets
 import numpy as np
 import soundfile as sf
@@ -7,7 +6,7 @@ import io
 from faster_whisper import WhisperModel
 
 HOST = '0.0.0.0'
-PORT = 8765  # Ensure it's the same port used in the client
+PORT = 8765
 
 model_size = "medium.en"
 model = WhisperModel(model_size, device="cuda", compute_type="float16")
@@ -17,11 +16,9 @@ SAMPLE_WIDTH = 2
 CHANNELS = 1
 CHUNK_DURATION_MS = 1000
 
-ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-ssl_context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
-
 async def handle_client(websocket):
     print(f"Client connected: {websocket.remote_address}")
+
     audio_buffer = b''
 
     try:
@@ -53,11 +50,10 @@ async def main():
         handle_client,
         HOST,
         PORT,
-        ssl=ssl_context,  # Enable SSL
         ping_interval=60,
         ping_timeout=60
     ):
-        print(f"Secure WebSocket server listening on {HOST}:{PORT} ...")
+        print(f"Server listening on {HOST}:{PORT} ...")
         await asyncio.Future()
 
 if __name__ == "__main__":
