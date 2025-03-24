@@ -7,7 +7,7 @@ import io
 from faster_whisper import WhisperModel
 
 HOST = '0.0.0.0'
-PORT = 10261  # Ensure it's the same port used in the client
+PORT = 8765  # Ensure it's the same port used in the client
 
 model_size = "medium.en"
 model = WhisperModel(model_size, device="cuda", compute_type="float16")
