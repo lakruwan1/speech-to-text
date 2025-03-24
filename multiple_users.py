@@ -9,7 +9,7 @@ HOST = '0.0.0.0'
 PORT = 8765
 
 # model_size = "medium.en"
-model_size = "large-v3"
+model_size = "large"
 model = WhisperModel(model_size, device="cuda", compute_type="float16")
 
 SAMPLE_RATE = 16000
