@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Transcription System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        h1, h2 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-width: 180px;
+        }
+        
+        .btn-record {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        .btn-record:hover:not(:disabled) {
+            background-color: #c0392b;
+        }
+        
+        .btn-record.recording {
+            animation: pulse 1.5s infinite;
+        }
+        
+        .btn-process {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .btn-process:hover:not(:disabled) {
+            background-color: #2980b9;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            height: 20px;
+            margin: 10px 0;
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        .transcript-box {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 150px;
+            border: 1px solid #e0e0e0;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        
+        .loading div {
+            width: 12px;
+            height: 12px;
+            margin: 0 5px;
+            border-radius: 50%;
+            background: #3498db;
+            animation: loading 1.2s cubic-bezier(0, 0.5, 0.5, 1) infinite;
+        }
+        
+        .loading div:nth-child(1) {
+            animation-delay: -0.24s;
+        }
+        
+        .loading div:nth-child(2) {
+            animation-delay: -0.12s;
+        }
+        
+        .loading div:nth-child(3) {
+            animation-delay: 0;
+        }
+        
+        @keyframes loading {
+            0% {
+                transform: scale(0);
+            }
+            50% {
+                transform: scale(1);
+            }
+            100% {
+                transform: scale(0);
+            }
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            background-color: #f8f9fa;
+            cursor: pointer;
+            margin: 0 5px;
+        }
+        
+        .tab.active {
+            background-color: white;
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Speech Transcription System</h1>
+        
+        <div class="tabs">
+            <div class="tab active" id="tab-realtime">Real-Time Transcription</div>
+            <div class="tab" id="tab-final">Final Transcription</div>
+        </div>
+        
+        <div class="controls">
+            <button id="recordButton" class="btn btn-record">
+                <span id="recordIcon">🎙️</span> 
+                <span id="recordText">Start Recording</span>
+            </button>
+            
+            <button id="processButton" class="btn btn-process" disabled>
+                🔄 Process Full Recording
+            </button>
+        </div>
+        
+        <div class="status" id="status">Ready to record</div>
+        
+        <div class="loading hidden" id="loadingIndicator">
+            <div></div><div></div><div></div>
+        </div>
+        
+        <div class="tab-content active" id="content-realtime">
+            <h2>Real-Time Transcript</h2>
+            <div class="transcript-box" id="realtimeTranscript">
+                Real-time transcription will appear here...
+            </div>
+        </div>
+        
+        <div class="tab-content" id="content-final">
+            <h2>Final Transcript</h2>
+            <div class="transcript-box" id="finalTranscript">
+                Final transcription will appear here...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const recordButton = document.getElementById('recordButton');
+        const processButton = document.getElementById('processButton');
+        const status = document.getElementById('status');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const realtimeTranscript = document.getElementById('realtimeTranscript');
+        const finalTranscript = document.getElementById('finalTranscript');
+        const recordIcon = document.getElementById('recordIcon');
+        const recordText = document.getElementById('recordText');
+        const tabRealtime = document.getElementById('tab-realtime');
+        const tabFinal = document.getElementById('tab-final');
+        const contentRealtime = document.getElementById('content-realtime');
+        const contentFinal = document.getElementById('content-final');
+        
+        // WebSocket and Recording Variables
+        const SERVER_URL = "ws://201.238.124.65:10221"; // Your hosted server
+        const LOCAL_API_URL = "http://localhost:5000/transcribe"; // Your local API
+        
+        let socket;
+        let mediaRecorder;
+        let audioContext;
+        let processor;
+        let input;
+        let globalStream;
+        let audioChunks = [];
+        let isRecording = false;
+        let audioBlob = null;
+        
+        // Event Listeners
+        recordButton.addEventListener('click', toggleRecording);
+        processButton.addEventListener('click', processFullRecording);
+        
+        // Tab switching
+        tabRealtime.addEventListener('click', () => switchTab('realtime'));
+        tabFinal.addEventListener('click', () => switchTab('final'));
+        
+        function switchTab(tabName) {
+            // Remove active class from all tabs and content
+            [tabRealtime, tabFinal].forEach(tab => tab.classList.remove('active'));
+            [contentRealtime, contentFinal].forEach(content => content.classList.remove('active'));
+            
+            // Add active class to selected tab and content
+            if (tabName === 'realtime') {
+                tabRealtime.classList.add('active');
+                contentRealtime.classList.add('active');
+            } else {
+                tabFinal.classList.add('active');
+                contentFinal.classList.add('active');
+            }
+        }
+        
+        async function toggleRecording() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+        
+        async function startRecording() {
+            realtimeTranscript.textContent = '';
+            finalTranscript.textContent = 'Final transcription will appear here...';
+            
+            recordButton.classList.add('recording');
+            recordIcon.textContent = '⏹️';
+            recordText.textContent = 'Stop Recording';
+            status.textContent = 'Connecting to server...';
+            processButton.disabled = true;
+            
+            // Connect to WebSocket
+            socket = new WebSocket(SERVER_URL);
+            socket.binaryType = 'arraybuffer';
+            
+            socket.onopen = async () => {
+                console.log("WebSocket connected!");
+                status.textContent = 'Connected! Recording...';
+                
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: { channelCount: 1, sampleRate: 16000, sampleSize: 16 },
+                        video: false
+                    });
+                    
+                    globalStream = stream;
+                    
+                    // Set up audio processing for real-time
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                    input = audioContext.createMediaStreamSource(stream);
+                    processor = audioContext.createScriptProcessor(4096, 1, 1);
+                    
+                    input.connect(processor);
+                    processor.connect(audioContext.destination);
+                    
+                    // For collecting full recording
+                    audioChunks = [];
+                    mediaRecorder = new MediaRecorder(stream);
+                    
+                    mediaRecorder.addEventListener('dataavailable', event => {
+                        audioChunks.push(event.data);
+                    });
+                    
+                    mediaRecorder.addEventListener('stop', () => {
+                        audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        processButton.disabled = false;
+                        status.textContent = 'Recording stopped. You can now process the full recording.';
+                    });
+                    
+                    // Audio processing for real-time transcription
+                    processor.onaudioprocess = (e) => {
+                        const inputData = e.inputBuffer.getChannelData(0);
+                        const volume = calculateRMS(inputData);
+                        const silenceThreshold = 0.04; // Adjust based on testing
+                        
+                        if (volume > silenceThreshold) {
+                            const buffer = downsampleBuffer(inputData, audioContext.sampleRate, 16000);
+                            if (socket.readyState === WebSocket.OPEN) {
+                                socket.send(buffer);
+                            }
+                        } else {
+                            console.log("Silence detected, skipping transmission.");
+                            displaySilence();
+                        }
+                    };
+                    
+                    // Start the media recorder for full recording
+                    mediaRecorder.start();
+                    isRecording = true;
+                    
+                } catch (error) {
+                    console.error("Error accessing microphone", error);
+                    status.textContent = 'Error: Could not access microphone. Please check permissions.';
+                    resetRecordingState();
+                }
+            };
+            
+            socket.onmessage = (event) => {
+                let message = event.data.trim();
+                message = message.replace(/Thanks for watching!|Thank you/gi, ".");
+                if (message) {
+                    const currentText = realtimeTranscript.textContent;
+                    if (currentText === 'Real-time transcription will appear here...') {
+                        realtimeTranscript.textContent = message;
+                    } else {
+                        realtimeTranscript.textContent = currentText + " " + message;
+                    }
+                    realtimeTranscript.scrollTop = realtimeTranscript.scrollHeight;
+                }
+            };
+            
+            socket.onclose = () => {
+                console.log("WebSocket closed");
+                if (isRecording) {
+                    status.textContent = 'Connection to server closed unexpectedly.';
+                }
+            };
+            
+            socket.onerror = (error) => {
+                console.error("WebSocket error:", error);
+                status.textContent = 'Error connecting to server.';
+                resetRecordingState();
+            };
+        }
+        
+        function stopRecording() {
+            recordButton.classList.remove('recording');
+            recordIcon.textContent = '🎙️';
+            recordText.textContent = 'Start Recording';
+            
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
+            }
+            
+            if (processor) {
+                processor.disconnect();
+                processor.onaudioprocess = null;
+            }
+            
+            if (input) {
+                input.disconnect();
+            }
+            
+            if (audioContext) {
+                audioContext.close();
+            }
+            
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            
+            if (globalStream) {
+                globalStream.getTracks().forEach(track => track.stop());
+            }
+            
+            isRecording = false;
+            status.textContent = 'Recording stopped. You can now process the full recording.';
+            console.log("Recording stopped.");
+        }
+        
+        function resetRecordingState() {
+            recordButton.classList.remove('recording');
+            recordIcon.textContent = '🎙️';
+            recordText.textContent = 'Start Recording';
+            isRecording = false;
+            
+            if (globalStream) {
+                globalStream.getTracks().forEach(track => track.stop());
+            }
+        }
+        
+        async function processFullRecording() {
+            if (!audioBlob) {
+                status.textContent = 'No recording available. Please record audio first.';
+                return;
+            }
+            
+            // Switch to final tab
+            switchTab('final');
+            
+            // Show loading state
+            loadingIndicator.classList.remove('hidden');
+            status.textContent = 'Processing full recording...';
+            finalTranscript.textContent = 'Processing your audio...';
+            processButton.disabled = true;
+            
+            const formData = new FormData();
+            formData.append('audio', audioBlob);
+            
+            try {
+                const response = await fetch(LOCAL_API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Hide loading state
+                loadingIndicator.classList.add('hidden');
+                processButton.disabled = false;
+                
+                // Display result
+                if (data.transcription) {
+                    finalTranscript.textContent = data.transcription;
+                    status.textContent = 'Final transcription complete!';
+                } else if (data.error) {
+                    finalTranscript.textContent = `Error: ${data.error}`;
+                    status.textContent = 'Transcription failed.';
+                }
+                
+            } catch (err) {
+                console.error('Error during transcription:', err);
+                loadingIndicator.classList.add('hidden');
+                processButton.disabled = false;
+                status.textContent = 'Error connecting to local API. Please try again.';
+                finalTranscript.textContent = 'Transcription failed. Please check if the local API server is running.';
+            }
+        }
+        
+        function calculateRMS(samples) {
+            let sum = 0;
+            for (let i = 0; i < samples.length; i++) {
+                sum += samples[i] * samples[i];
+            }
+            return Math.sqrt(sum / samples.length);
+        }
+        
+        function displaySilence() {
+            // Optional: visualize silence in real-time transcript
+            // realtimeTranscript.textContent += " . ";
+            // realtimeTranscript.scrollTop = realtimeTranscript.scrollHeight;
+        }
+        
+        function downsampleBuffer(buffer, sampleRate, outSampleRate) {
+            if (outSampleRate === sampleRate) {
+                return convertFloat32ToInt16(buffer);
+            }
+            
+            const sampleRateRatio = sampleRate / outSampleRate;
+            const newLength = Math.round(buffer.length / sampleRateRatio);
+            const result = new Float32Array(newLength);
+            
+            let offsetResult = 0;
+            let offsetBuffer = 0;
+            
+            while (offsetResult < result.length) {
+                const nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
+                let accum = 0, count = 0;
+                for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+                    accum += buffer[i];
+                    count++;
+                }
+                
+                result[offsetResult] = accum / count;
+                offsetResult++;
+                offsetBuffer = nextOffsetBuffer;
+            }
+            
+            return convertFloat32ToInt16(result);
+        }
+        
+        function convertFloat32ToInt16(buffer) {
+            let l = buffer.length;
+            const buf = new Int16Array(l);
+            while (l--) {
+                buf[l] = Math.max(-1, Math.min(1, buffer[l])) * 0x7FFF;
+            }
+            return buf.buffer;
+        }
+    </script>
+</body>
+</html>
