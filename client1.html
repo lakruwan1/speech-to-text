@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Transcription</title>
+</head>
+<body>
+    <h1>🗣️ Real-Time Speech to Text Transcription</h1>
+    <button id="startBtn">🎙️ Start Recording</button>
+    <button id="stopBtn" disabled>🛑 Stop Recording</button>
+
+    <h2>Transcript:</h2>
+    <div id="transcription" style="border: 1px solid black; padding: 10px; width: 80%; min-height: 50px;"></div>
+
+    <script>
+        let socket;
+        let mediaRecorder;
+        let audioContext;
+        let processor;
+        let input;
+        let globalStream;
+
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const transcriptionDiv = document.getElementById('transcription');
+
+        const SERVER_URL = "ws://201.238.124.65:10221"; // replace with your server address and port
+
+        startBtn.addEventListener('click', startRecording);
+        stopBtn.addEventListener('click', stopRecording);
+
+        async function startRecording() {
+            transcriptionDiv.innerHTML = '';
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+
+            socket = new WebSocket(SERVER_URL);
+
+            socket.binaryType = 'arraybuffer';
+
+            socket.onopen = async () => {
+                console.log("WebSocket connected!");
+
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            channelCount: 1,
+                            sampleRate: 16000,
+                            sampleSize: 16
+                        },
+                        video: false
+                    });
+
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                        sampleRate: 16000 // Match the server sample rate
+                    });
+
+                    globalStream = stream;
+
+                    input = audioContext.createMediaStreamSource(stream);
+
+                    processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+                    input.connect(processor);
+                    processor.connect(audioContext.destination);
+
+                    processor.onaudioprocess = (e) => {
+                        const inputData = e.inputBuffer.getChannelData(0);
+                        const buffer = downsampleBuffer(inputData, audioContext.sampleRate, 16000);
+
+                        if (socket.readyState === WebSocket.OPEN) {
+                            socket.send(buffer);
+                        }
+                    };
+                } catch (error) {
+                    console.error("Error accessing microphone", error);
+                }
+            };
+
+            // socket.onmessage = (event) => {
+            //     const message = event.data;
+            //     if (message) {
+            //         const p = document.createElement('p');
+            //         p.textContent = message;
+            //         transcriptionDiv.appendChild(p);
+            //         transcriptionDiv.scrollTop = transcriptionDiv.scrollHeight;
+            //     }
+            // };
+
+            socket.onmessage = (event) => {
+                const message = event.data;
+                if (message) {
+                    // Get current text
+                    const currentText = transcriptionDiv.textContent;
+
+                    // Append new message with a space
+                    transcriptionDiv.textContent = currentText + " " + message;
+
+                    // Auto-scroll (if needed)
+                    transcriptionDiv.scrollTop = transcriptionDiv.scrollHeight;
+                }
+            };
+
+
+            socket.onclose = () => {
+                console.log("WebSocket closed");
+            };
+
+            socket.onerror = (error) => {
+                console.error("WebSocket error:", error);
+            };
+        }
+
+        function stopRecording() {
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
+            }
+
+            if (processor) {
+                processor.disconnect();
+                processor.onaudioprocess = null;
+            }
+
+            if (input) {
+                input.disconnect();
+            }
+
+            if (audioContext) {
+                audioContext.close();
+            }
+
+            if (globalStream) {
+                globalStream.getTracks().forEach(track => track.stop());
+            }
+
+            console.log("Recording stopped.");
+        }
+
+        function downsampleBuffer(buffer, sampleRate, outSampleRate) {
+            if (outSampleRate === sampleRate) {
+                return convertFloat32ToInt16(buffer);
+            }
+
+            const sampleRateRatio = sampleRate / outSampleRate;
+            const newLength = Math.round(buffer.length / sampleRateRatio);
+            const result = new Float32Array(newLength);
+
+            let offsetResult = 0;
+            let offsetBuffer = 0;
+
+            while (offsetResult < result.length) {
+                const nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
+                let accum = 0, count = 0;
+                for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+                    accum += buffer[i];
+                    count++;
+                }
+
+                result[offsetResult] = accum / count;
+                offsetResult++;
+                offsetBuffer = nextOffsetBuffer;
+            }
+
+            return convertFloat32ToInt16(result);
+        }
+
+        function convertFloat32ToInt16(buffer) {
+            let l = buffer.length;
+            const buf = new Int16Array(l);
+            while (l--) {
+                buf[l] = Math.max(-1, Math.min(1, buffer[l])) * 0x7FFF;
+            }
+            return buf.buffer;
+        }
+    </script>
+</body>
+</html>
