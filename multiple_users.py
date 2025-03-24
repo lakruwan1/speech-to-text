@@ -1,5 +1,6 @@
 import asyncio
 import websockets
+import ssl
 import numpy as np
 import soundfile as sf
 import io
@@ -15,6 +16,10 @@ SAMPLE_RATE = 16000
 SAMPLE_WIDTH = 2
 CHANNELS = 1
 CHUNK_DURATION_MS = 1000
+
+# Load SSL context
+ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+ssl_context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")  # Use actual paths
 
 async def handle_client(websocket):
     print(f"Client connected: {websocket.remote_address}")
@@ -50,10 +55,11 @@ async def main():
         handle_client,
         HOST,
         PORT,
+        ssl=ssl_context,  # Enable SSL
         ping_interval=60,
         ping_timeout=60
     ):
-        print(f"Server listening on {HOST}:{PORT} ...")
+        print(f"Secure WebSocket server listening on wss://{HOST}:{PORT} ...")
         await asyncio.Future()
 
 if __name__ == "__main__":
