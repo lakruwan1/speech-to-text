@@ -18,7 +18,7 @@ CHANNELS = 1
 CHUNK_DURATION_MS = 1000
 
 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-ssl_context.load_cert_chain(certfile="/path/to/your/cert.pem", keyfile="/path/to/your/key.pem")
+ssl_context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
 
 async def handle_client(websocket):
     print(f"Client connected: {websocket.remote_address}")
