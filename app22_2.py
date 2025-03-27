@@ -20,8 +20,8 @@ app = Flask(__name__)
 CORS(app)
 
 # Celery configuration
-app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
-app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
+app.config['CELERY_BROKER_URL'] = 'redis://80.15.7.37:6379/0'
+app.config['CELERY_RESULT_BACKEND'] = 'redis://80.15.7.37:6379/0'
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
 celery.conf.update(app.config)
 
