@@ -237,9 +237,9 @@
         const contentFinal = document.getElementById('content-final');
         
         // WebSocket and Recording Variables
-        const SERVER_URL = "ws://201.238.124.65:10221"; // Your hosted server
-        const LOCAL_API_URL = "http://localhost:5000/transcribe"; // Your local API
-        
+        const SERVER_URL = "ws://87.197.127.62:40225"; // Your hosted server
+        const LOCAL_API_URL = "https://4rwzwgjb5r0rtz-5000.proxy.runpod.net/transcribe"; // Your local API
+
         let socket;
         let mediaRecorder;
         let audioContext;
@@ -333,7 +333,7 @@
                     processor.onaudioprocess = (e) => {
                         const inputData = e.inputBuffer.getChannelData(0);
                         const volume = calculateRMS(inputData);
-                        const silenceThreshold = 0.04; // Adjust based on testing
+                        const silenceThreshold = 0.015; // Adjust based on testing
                         
                         if (volume > silenceThreshold) {
                             const buffer = downsampleBuffer(inputData, audioContext.sampleRate, 16000);
