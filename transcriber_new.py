@@ -12,7 +12,7 @@ from faster_whisper import WhisperModel
 
 # Configuration
 HOST = '0.0.0.0'
-WS_PORT = 40225
+WS_PORT = 8080
 FLASK_PORT = 5000
 MODEL_SIZE = "medium.en"
 SAMPLE_RATE = 16000
