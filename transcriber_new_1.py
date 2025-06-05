@@ -32,7 +32,8 @@ model = WhisperModel(MODEL_SIZE, device="cuda", compute_type="float16")
 print("Model loaded successfully!")
 
 # Initialize Gemini model
-gemini_model = genai.GenerativeModel('gemini-pro')
+# gemini_model = genai.GenerativeModel('gemini-pro')
+gemini_model = genai.GenerativeModel('gemini-1.5-flash')
 print("Gemini model initialized successfully!")
 
 #=========================#
