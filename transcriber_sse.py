@@ -282,11 +282,18 @@ def analyse_stream():
             
             return Response(error_stream(), mimetype='text/plain')
         
+        # Define newline variables to avoid backslashes in f-strings
+        newline = '\n'
+        double_newline = '\n\n'
+        
         # First send the transcription
         def stream_response():
-            yield f"data: {json.dumps({'data': f'**Transcription:**\\n{transcription}\\n\\n'})}\n\n"
+            transcription_text = f"**Transcription:**{newline}{transcription}{double_newline}"
+            yield f"data: {json.dumps({'data': transcription_text})}\n\n"
             time.sleep(0.5)
-            yield f"data: {json.dumps({'data': '**Analysis:**\\n\\n'})}\n\n"
+            
+            analysis_header = f"**Analysis:**{double_newline}"
+            yield f"data: {json.dumps({'data': analysis_header})}\n\n"
             time.sleep(0.3)
             
             # Then stream the analysis
