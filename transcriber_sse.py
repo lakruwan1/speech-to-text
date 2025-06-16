@@ -54,7 +54,7 @@ def analyze_with_template(transcription, template):
     1. Use the exact template structure provided
     2. Only include information that is explicitly mentioned in the transcript
     3. If information for any section is not mentioned in the transcript, leave that section blank (do not include placeholder text)
-    4. Make all section titles bold using \bTitle\b format
+    4. Make all section titles bold using **Title** format
     5. Use proper line breaks for readability
     6. Be accurate and don't infer information not present in the transcript
     7. Follow the template structure exactly as provided
@@ -86,7 +86,7 @@ def stream_analysis(transcription, template):
     1. Use the exact template structure provided
     2. Only include information that is explicitly mentioned in the transcript
     3. If information for any section is not mentioned in the transcript, leave that section blank (do not include placeholder text)
-    4. Make all section titles bold using \bTitle\b format
+    4. Make all section titles bold using **Title** format
     5. Use proper line breaks for readability
     6. Be accurate and don't infer information not present in the transcript
     7. Follow the template structure exactly as provided
