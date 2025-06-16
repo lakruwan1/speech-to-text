@@ -9,6 +9,7 @@ import json
 import google.generativeai as genai
 from faster_whisper import WhisperModel
 import time
+import re
 
 # Configuration
 HOST = '0.0.0.0'
@@ -38,6 +39,28 @@ print("Gemini model initialized successfully!")
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
+
+def stream_text_chunks(text, chunk_size=3, delay=0.1):
+    """
+    Stream text in smaller chunks with controlled delay
+    """
+    words = text.split(' ')
+    current_chunk = []
+    
+    for word in words:
+        current_chunk.append(word)
+        
+        if len(current_chunk) >= chunk_size:
+            chunk_text = ' '.join(current_chunk) + ' '
+            yield f"data: {json.dumps({'data': chunk_text})}\n\n"
+            current_chunk = []
+            time.sleep(delay)
+    
+    # Send remaining words
+    if current_chunk:
+        chunk_text = ' '.join(current_chunk)
+        yield f"data: {json.dumps({'data': chunk_text})}\n\n"
+        time.sleep(delay)
 
 def analyze_medical_conversation_streaming(transcription):
     """
@@ -89,9 +112,9 @@ def analyze_medical_conversation_streaming(transcription):
         
         for chunk in response:
             if chunk.text:
-                # Format the response in the required JSON format
-                yield f"data: {json.dumps({'data': chunk.text})}\n\n"
-                time.sleep(0.05)  # Small delay for better streaming effect
+                # Stream the text in smaller chunks with delay
+                for text_chunk in stream_text_chunks(chunk.text, chunk_size=2, delay=0.15):
+                    yield text_chunk
         
     except Exception as e:
         print(f"[Gemini Analysis] Error: {str(e)}")
@@ -278,34 +301,28 @@ def analyse_stream():
         
         if not transcription.strip():
             def error_stream():
-                yield f"data: {json.dumps({'data': 'Error: No speech detected in audio file'})}\n\n"
+                yield f"data: {json.dumps({'error': 'No speech detected in audio file'})}\n\n"
             
             return Response(error_stream(), mimetype='text/plain')
         
-        # Define newline variables to avoid backslashes in f-strings
-        newline = '\n'
-        double_newline = '\n\n'
-        
-        # First send the transcription
         def stream_response():
-            transcription_text = f"**Transcription:**{newline}{transcription}{double_newline}"
-            yield f"data: {json.dumps({'data': transcription_text})}\n\n"
+            # First send the transcription completion signal
+            yield f"data: {json.dumps({'transcription_complete': transcription})}\n\n"
             time.sleep(0.5)
-            
-            analysis_header = f"**Analysis:**{double_newline}"
-            yield f"data: {json.dumps({'data': analysis_header})}\n\n"
-            time.sleep(0.3)
             
             # Then stream the analysis
             for chunk in analyze_medical_conversation_streaming(transcription):
                 yield chunk
+            
+            # Send completion signal
+            yield f"data: {json.dumps({'analysis_complete': True})}\n\n"
         
         return Response(stream_response(), mimetype='text/plain')
     
     except Exception as e:
         print(f"[Flask API - Stream Analyse] Error during analysis: {str(e)}")
         def error_stream():
-            yield f"data: {json.dumps({'data': f'Error: {str(e)}'})}\n\n"
+            yield f"data: {json.dumps({'error': f'Error: {str(e)}'})}\n\n"
         
         return Response(error_stream(), mimetype='text/plain')
     
@@ -321,9 +338,9 @@ def stream_test():
     text = data.get('text', 'Hello, this is a streaming test!')
     
     def generate():
-        for char in text:
-            yield f"data: {json.dumps({'data': char})}\n\n"
-            time.sleep(0.1)  # Simulate typing delay
+        # Stream text in smaller chunks
+        for chunk_data in stream_text_chunks(text, chunk_size=2, delay=0.2):
+            yield chunk_data
     
     return Response(generate(), mimetype='text/plain')
 
