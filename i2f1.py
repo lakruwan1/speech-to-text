@@ -11,7 +11,7 @@ from datetime import datetime
 app = Flask(__name__)
 
 # Configure Gemini AI
-genai.configure(api_key="AIzaSyCzQsnMap61JhNozh9CQGYa8AAFsOR3yAM")
+genai.configure(api_key="AIzaSyC3kaKAFozoCl7oELP9CDiuzKQwsFbQDpY")
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 # Store forms in memory (in production, use a database)
