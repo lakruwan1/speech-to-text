@@ -19,9 +19,9 @@ CHANNELS = 1
 CHUNK_DURATION_MS = 1000
 
 # Azure OpenAI Configuration
-AZURE_OPENAI_ENDPOINT = "https://scribee-ai.openai.azure.com/"  # Your endpoint from the screenshot
-AZURE_OPENAI_API_KEY = "AfKaljlQyKJioFfJ8NY9XpZmoUgLCN0END8EQMkjkzz10stdrGa7JQQJ99BFACL93NaXJ3w3AAABACOGUNIv"  # You need to get this from Azure portal
-AZURE_OPENAI_API_VERSION = "2024-02-15-preview"  # Latest stable version
+AZURE_OPENAI_ENDPOINT = "https://scrib-mc9xkslj-eastus2.cognitiveservices.azure.com/"  # Your endpoint from the screenshot
+AZURE_OPENAI_API_KEY = "5NdvOKi12atZUzZcUXafW3OmeyUhNslWx5e1QA8yVWlVZ09OcyaqJQQJ99BFACHYHv6XJ3w3AAAAACOGovPz"  # You need to get this from Azure portal
+AZURE_OPENAI_API_VERSION = "2024-12-01-preview"  # Latest stable version
 AZURE_DEPLOYMENT_NAME = "Scribee-ai"  # You need to create a deployment in Azure OpenAI Studio
 
 print(f"Initializing Whisper model: {MODEL_SIZE}")
