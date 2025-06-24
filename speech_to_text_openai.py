@@ -104,71 +104,6 @@ def analyze_with_template(transcription, template):
         print(f"[Azure OpenAI Analysis] Error: {str(e)}")
         return f"Error: Could not analyze conversation - {str(e)}"
 
-def stream_analysis(transcription, template):
-    """
-    Stream the analysis response from Azure OpenAI
-    """
-    prompt = f"""
-    You are a medical AI assistant. Analyze the following medical conversation transcript and create a structured medical report using the provided template format.
-
-    Transcript: "{transcription}"
-
-    Template Format:
-    {template}
-
-    Instructions:
-    1. Use the exact template structure provided
-    2. Only include information that is explicitly mentioned in the transcript
-    3. If information for any section is not mentioned in the transcript, leave that section blank (do not include placeholder text)
-    4. Make all section titles bold using **Title** format
-    5. Use proper line breaks for readability
-    6. Be accurate and don't infer information not present in the transcript
-    7. Follow the template structure exactly as provided
-
-    Create the medical report based on the transcript and template:
-    """
-    
-    try:
-        # Updated message format with developer role and proper structure
-        messages = [
-            {
-                "role": "developer",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "You are a medical AI assistant specialized in analyzing medical conversations and creating structured reports."
-                    }
-                ]
-            },
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": prompt
-                    }
-                ]
-            }
-        ]
-        
-        response = azure_client.chat.completions.create(
-            model=AZURE_DEPLOYMENT_NAME,
-            messages=messages,
-            max_completion_tokens=2000,
-            stream=True
-        )
-        
-        for chunk in response:
-            if chunk.choices and len(chunk.choices) > 0 and chunk.choices[0].delta.content:
-                # Format the response as JSON for streaming
-                data = {"data": chunk.choices[0].delta.content}
-                yield f"data: {json.dumps(data)}\n\n"
-                
-    except Exception as e:
-        print(f"[Stream Analysis] Error: {str(e)}")
-        error_data = {"data": f"Error: Could not analyze conversation - {str(e)}"}
-        yield f"data: {json.dumps(error_data)}\n\n"
-
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
     if 'audio' not in request.files:
@@ -229,17 +164,11 @@ def analyse():
         print(f"[Flask API - Analyse] Transcription length: {len(transcription)} characters")
         print(f"[Flask API - Analyse] Template length: {len(template)} characters")
         
-        # Return streaming response
-        return Response(
-            stream_analysis(transcription, template),
-            mimetype='text/plain',
-            headers={
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type',
-            }
-        )
+        # Get the complete analysis
+        analysis_result = analyze_with_template(transcription, template)
+        
+        # Return simple JSON response like the second code
+        return jsonify({'data': analysis_result})
     
     except Exception as e:
         print(f"[Flask API - Analyse] Error during analysis: {str(e)}")
