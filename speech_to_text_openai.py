@@ -275,7 +275,7 @@ def test_azure():
         response = azure_client.chat.completions.create(
             model=AZURE_DEPLOYMENT_NAME,
             messages=messages,
-            max_completion_tokens=100,
+            max_completion_tokens=1000,
             stream=False
         )
         
