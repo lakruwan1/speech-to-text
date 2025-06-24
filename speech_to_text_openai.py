@@ -18,22 +18,22 @@ SAMPLE_WIDTH = 2
 CHANNELS = 1
 CHUNK_DURATION_MS = 1000
 
-# Azure OpenAI Configuration
-AZURE_OPENAI_ENDPOINT = "https://scrib-mc9xkslj-eastus2.cognitiveservices.azure.com/"  # Your endpoint from the screenshot
-AZURE_OPENAI_API_KEY = "5NdvOKi12atZUzZcUXafW3OmeyUhNslWx5e1QA8yVWlVZ09OcyaqJQQJ99BFACHYHv6XJ3w3AAAAACOGovPz"  # You need to get this from Azure portal
-AZURE_OPENAI_API_VERSION = "2024-12-01-preview"  # Latest stable version
-AZURE_DEPLOYMENT_NAME = "Scribee-ai"  # You need to create a deployment in Azure OpenAI Studio
+# Azure OpenAI Configuration - Updated with correct endpoint and deployment
+AZURE_OPENAI_ENDPOINT = "https://scrib-mc9xkslj-eastus2.openai.azure.com/"
+AZURE_OPENAI_API_KEY = "5NdvOKi12atZUzZcUXafW3OmeyUhNslWx5e1QA8yVWlVZ09OcyaqJQQJ99BFACHYHv6XJ3w3AAAAACOGovPz"
+AZURE_OPENAI_API_VERSION = "2025-01-01-preview"
+AZURE_DEPLOYMENT_NAME = "o4-mini"
 
 print(f"Initializing Whisper model: {MODEL_SIZE}")
 # Initialize the model once for both services
 model = WhisperModel(MODEL_SIZE, device="cuda", compute_type="float16")
 print("Model loaded successfully!")
 
-# Initialize Azure OpenAI client
+# Initialize Azure OpenAI client with updated configuration
 azure_client = AzureOpenAI(
+    azure_endpoint=AZURE_OPENAI_ENDPOINT,
     api_key=AZURE_OPENAI_API_KEY,
-    api_version=AZURE_OPENAI_API_VERSION,
-    azure_endpoint=AZURE_OPENAI_ENDPOINT
+    api_version=AZURE_OPENAI_API_VERSION
 )
 print("Azure OpenAI client initialized successfully!")
 
@@ -69,14 +69,34 @@ def analyze_with_template(transcription, template):
     """
     
     try:
+        # Updated message format with developer role and proper structure
+        messages = [
+            {
+                "role": "developer",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "You are a medical AI assistant specialized in analyzing medical conversations and creating structured reports."
+                    }
+                ]
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": prompt
+                    }
+                ]
+            }
+        ]
+        
         response = azure_client.chat.completions.create(
             model=AZURE_DEPLOYMENT_NAME,
-            messages=[
-                {"role": "system", "content": "You are a medical AI assistant specialized in analyzing medical conversations and creating structured reports."},
-                {"role": "user", "content": prompt}
-            ],
+            messages=messages,
+            max_completion_tokens=2000,
             temperature=0.3,
-            max_tokens=2000
+            stream=False
         )
         
         return response.choices[0].message.content.strip()
@@ -110,24 +130,44 @@ def stream_analysis(transcription, template):
     """
     
     try:
+        # Updated message format with developer role and proper structure
+        messages = [
+            {
+                "role": "developer",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "You are a medical AI assistant specialized in analyzing medical conversations and creating structured reports."
+                    }
+                ]
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": prompt
+                    }
+                ]
+            }
+        ]
+        
         response = azure_client.chat.completions.create(
             model=AZURE_DEPLOYMENT_NAME,
-            messages=[
-                {"role": "system", "content": "You are a medical AI assistant specialized in analyzing medical conversations and creating structured reports."},
-                {"role": "user", "content": prompt}
-            ],
+            messages=messages,
+            max_completion_tokens=2000,
             temperature=0.3,
-            max_tokens=2000,
             stream=True
         )
         
         for chunk in response:
-            if chunk.choices[0].delta.content:
+            if chunk.choices and len(chunk.choices) > 0 and chunk.choices[0].delta.content:
                 # Format the response as JSON for streaming
                 data = {"data": chunk.choices[0].delta.content}
                 yield f"data: {json.dumps(data)}\n\n"
                 
     except Exception as e:
+        print(f"[Stream Analysis] Error: {str(e)}")
         error_data = {"data": f"Error: Could not analyze conversation - {str(e)}"}
         yield f"data: {json.dumps(error_data)}\n\n"
 
@@ -207,11 +247,64 @@ def analyse():
         print(f"[Flask API - Analyse] Error during analysis: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/test-azure', methods=['GET'])
+def test_azure():
+    """
+    Test endpoint to verify Azure OpenAI connection
+    """
+    try:
+        messages = [
+            {
+                "role": "developer",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "You are an AI assistant that helps people find information."
+                    }
+                ]
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Say hello and confirm you are working properly."
+                    }
+                ]
+            }
+        ]
+        
+        response = azure_client.chat.completions.create(
+            model=AZURE_DEPLOYMENT_NAME,
+            messages=messages,
+            max_completion_tokens=100,
+            stream=False
+        )
+        
+        return jsonify({
+            'status': 'success',
+            'response': response.choices[0].message.content.strip(),
+            'model': AZURE_DEPLOYMENT_NAME,
+            'endpoint': AZURE_OPENAI_ENDPOINT
+        })
+        
+    except Exception as e:
+        print(f"[Test Azure] Error: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'model': AZURE_DEPLOYMENT_NAME,
+            'endpoint': AZURE_OPENAI_ENDPOINT
+        }), 500
+
 #===================#
 # Main Entry Point
 #===================#
 
 if __name__ == "__main__":
     print("Starting Speech Transcription API...")
+    print(f"Azure OpenAI Endpoint: {AZURE_OPENAI_ENDPOINT}")
+    print(f"Deployment Name: {AZURE_DEPLOYMENT_NAME}")
+    print(f"API Version: {AZURE_OPENAI_API_VERSION}")
     print(f"Flask API server starting on {HOST}:{FLASK_PORT}...")
     app.run(host=HOST, port=FLASK_PORT, debug=False)
