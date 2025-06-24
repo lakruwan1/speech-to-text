@@ -95,7 +95,6 @@ def analyze_with_template(transcription, template):
             model=AZURE_DEPLOYMENT_NAME,
             messages=messages,
             max_completion_tokens=2000,
-            temperature=0.3,
             stream=False
         )
         
@@ -156,7 +155,6 @@ def stream_analysis(transcription, template):
             model=AZURE_DEPLOYMENT_NAME,
             messages=messages,
             max_completion_tokens=2000,
-            temperature=0.3,
             stream=True
         )
         
